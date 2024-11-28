@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PoetGram - Login/Signup</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .auth-box:hover {
+            transform: scale(1.02);
+        }
+
+        .logo {
+            font-family: 'Pacifico', cursive;
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group input {
+            width: 90%;
+            padding: 12px;
+            margin: 5px;
+            border: 1px solid #e1e1e1;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .switch-form {
+            color: #667eea;
+            cursor: pointer;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .switch-form:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #ff4444;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .success-message {
+            color: #00C851;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div id="loginForm" class="auth-box">
+            <div class="logo">PoetGram</div>
+            
+            <div class="form-group">
+                <input type="text" id="loginUsername" placeholder="Username" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+            </div>
+            
+            <div id="loginError" class="error-message"></div>
+            
+            <button onclick="login()">Log In</button>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                Don't have an account? 
+                <span class="switch-form" onclick="toggleForms()">Sign up</span>
+            </div>
+        </div>
+
+        <div id="signupForm" class="auth-box" style="display: none;">
+            <div class="logo">PoetGram</div>
+            
+            <div class="form-group">
+                <input type="text" id="signupUsername" placeholder="Choose Username" required>
+                <input type="password" id="signupPassword" placeholder="Choose Password" required>
+                <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            </div>
+            
+            <div id="signupError" class="error-message"></div>
+            <div id="signupSuccess" class="success-message"></div>
+            
+            <button onclick="signup()">Sign Up</button>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                Have an account? 
+                <span class="switch-form" onclick="toggleForms()">Log in</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleForms() {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            
+            if (loginForm.style.display === 'none') {
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+            } else {
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+            }
+            
+            // Clear error messages and inputs
+            document.getElementById('loginError').textContent = '';
+            document.getElementById('signupError').textContent = '';
+            document.getElementById('signupSuccess').textContent = '';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('signupUsername').value = '';
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorElement = document.getElementById('loginError');
+
+            if (!username || !password) {
+                errorElement.textContent = 'Please enter username and password';
+                errorElement.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Successful login, redirect to homepage
+                    localStorage.setItem('currentUser', username);
+                    window.location.href = 'homepage.html';
+                } else {
+                    errorElement.textContent = data.message || 'Login failed';
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                errorElement.textContent = 'Network error. Please try again.';
+                errorElement.style.display = 'block';
+            }
+        }
+
+        async function signup() {
+            const username = document.getElementById('signupUsername').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorElement = document.getElementById('signupError');
+            const successElement = document.getElementById('signupSuccess');
+
+            // Validate inputs
+            if (!username || !password || !confirmPassword) {
+                errorElement.textContent = 'Please fill in all fields';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorElement.textContent = 'Passwords do not match';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+                return;
+            }
+
+            // Basic password strength check
+            if (password.length < 6) {
+                errorElement.textContent = 'Password must be at least 6 characters long';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successElement.textContent = 'Account created successfully!';
+                    successElement.style.display = 'block';
+                    errorElement.style.display = 'none';
+                    
+                    // Optionally auto-login or show login form
+                    setTimeout(() => {
+                        toggleForms();
+                        document.getElementById('loginUsername').value = username;
+                    }, 1500);
+                } else {
+                    errorElement.textContent = data.message || 'Signup failed';
+                    errorElement.style.display = 'block';
+                    successElement.style.display = 'none';
+                }
+            } catch (error) {
+                errorElement.textContent = 'Network error. Please try again.';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

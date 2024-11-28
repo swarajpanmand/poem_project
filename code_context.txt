@@ -1,0 +1,937 @@
+// File: homepage.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PoetGram - Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+        .post-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .genre-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .genre-buttons button {
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .genre-buttons button.selected {
+            background-color: #4CAF50;
+            color: white;
+        }
+        #postContent {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .posts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .post {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-content">
+        <div class="logo">PoetGram</div>
+        <div class="user-info">
+            <span id="currentUserDisplay" class="user-name"></span>
+            <button onclick="showNewPostForm()">New Poem</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div id="newPostForm" class="post-form" style="display: none;">
+        <div class="genre-buttons">
+            <button data-genre="Poetry" onclick="selectGenre(this)">Poetry</button>
+            <button data-genre="Fiction" onclick="selectGenre(this)">Fiction</button>
+            <button data-genre="Drama" onclick="selectGenre(this)">Drama</button>
+            <button data-genre="Horror" onclick="selectGenre(this)">Horror</button>
+            <button data-genre="Comedy" onclick="selectGenre(this)">Comedy</button>
+        </div>
+        <textarea id="postContent" placeholder="Write your piece here..."></textarea>
+        <button onclick="submitPost()">Post</button>
+    </div>
+
+    <div id="postsContainer" class="posts-container">
+        <!-- Posts will be dynamically loaded here -->
+    </div>
+
+    <script>
+        let selectedGenre = null;
+
+        // Ensure user is logged in
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('currentUserDisplay').textContent = currentUser;
+                loadPosts();
+            }
+        });
+
+        function selectGenre(button) {
+            // Remove selected class from all buttons
+            document.querySelectorAll('.genre-buttons button').forEach(btn => 
+                btn.classList.remove('selected')
+            );
+            
+            // Add selected class to clicked button
+            button.classList.add('selected');
+            selectedGenre = button.dataset.genre;
+        }
+
+        function showNewPostForm() {
+            const form = document.getElementById('newPostForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function submitPost() {
+    const content = document.getElementById('postContent').value.trim();
+    const currentUser = localStorage.getItem('currentUser');
+
+    if (!selectedGenre || !content) {
+        alert('Please select a genre and write something!');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:3000/post', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                genre: selectedGenre,
+                content: content,
+                likes: 0,
+                username: currentUser
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Clear form and hide it
+            document.getElementById('postContent').value = '';
+            document.getElementById('newPostForm').style.display = 'none';
+            
+            // Reset selected genre
+            selectedGenre = null;
+            document.querySelectorAll('.genre-buttons button').forEach(btn => 
+                btn.classList.remove('selected')
+            );
+            
+            // Reload posts
+            loadPosts();
+        } else {
+            console.error('Post submission error:', data);
+            alert(data.message || 'Failed to post');
+        }
+    } catch (error) {
+        console.error('Network error details:', error);
+        alert('Network error: Please check your connection or server status');
+    }
+}
+        
+
+async function loadComments(postId) {
+    try {
+        const response = await fetch(`http://localhost:3000/comments/${postId}`);
+        const comments = await response.json();
+
+        const commentsContainer = document.getElementById(`comments-${postId}`);
+        commentsContainer.innerHTML = ''; // Clear existing comments
+
+        if (comments.length === 0) {
+            commentsContainer.innerHTML = '<p>No comments yet.</p>';
+            return;
+        }
+
+        comments.forEach(comment => {
+            // Ensure all values are defined and not null
+            const username = comment.username || 'Anonymous';
+            const commentText = comment.comment || 'Empty comment';
+
+            const commentElement = document.createElement('div');
+            commentElement.innerHTML = `
+                <p><strong>${username}</strong>: ${commentText}</p>
+            `;
+            commentsContainer.appendChild(commentElement);
+        });
+    } catch (error) {
+        console.error('Error loading comments:', error);
+    }
+}
+
+async function likePost(postId) {
+    try {
+        const response = await fetch('http://localhost:3000/like', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ postId })
+        });
+
+        if (response.ok) {
+            // Update likes count
+            const likesElement = document.getElementById(`likes-${postId}`);
+            likesElement.textContent = parseInt(likesElement.textContent) + 1;
+        }
+    } catch (error) {
+        console.error('Error liking post:', error);
+    }
+}
+
+function showCommentForm(postId) {
+    const commentForm = document.getElementById(`comment-form-${postId}`);
+    commentForm.style.display = commentForm.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitComment(postId) {
+    const commentText = document.getElementById(`comment-text-${postId}`).value;
+    const currentUser = localStorage.getItem('currentUser');
+
+    if (!commentText) {
+        alert('Please write a comment');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:3000/comment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                postId, 
+                username: currentUser, 
+                comment: commentText 
+            })
+        });
+
+        if (response.ok) {
+            // Fetch and display comments
+            await loadComments(postId);
+            
+            // Clear comment input
+            document.getElementById(`comment-text-${postId}`).value = '';
+            
+            // Hide comment form
+            document.getElementById(`comment-form-${postId}`).style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error submitting comment:', error);
+    }
+}
+
+async function loadComments(postId) {
+    try {
+        const response = await fetch(`http://localhost:3000/comments/${postId}`);
+        const comments = await response.json();
+
+        const commentsContainer = document.getElementById(`comments-${postId}`);
+        commentsContainer.innerHTML = ''; // Clear existing comments
+
+        comments.forEach(comment => {
+            const commentElement = document.createElement('div');
+            commentElement.innerHTML = `
+                <p><strong>${comment.username}</strong>: ${comment.comment}</p>
+            `;
+            commentsContainer.appendChild(commentElement);
+        });
+    } catch (error) {
+        console.error('Error loading comments:', error);
+    }
+}
+
+// Modify submitPost to include content
+async function submitPost() {
+    const content = document.getElementById('postContent').value.trim(); // Add trim() to remove whitespace
+    const currentUser = localStorage.getItem('currentUser');
+
+    if (!selectedGenre || !content) {
+        alert('Please select a genre and write something!');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:3000/post', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                genre: selectedGenre,
+                content: content,
+                likes: 0,
+                username: currentUser
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Clear form and hide it
+            document.getElementById('postContent').value = '';
+            document.getElementById('newPostForm').style.display = 'none';
+            
+            // Reset selected genre
+            selectedGenre = null;
+            document.querySelectorAll('.genre-buttons button').forEach(btn => 
+                btn.classList.remove('selected')
+            );
+            
+            // Reload posts
+            loadPosts();
+        } else {
+            console.error('Post submission error:', data);
+            alert(data.message || 'Failed to post');
+        }
+    } catch (error) {
+        console.error('Network error details:', error);
+        alert('Network error: Please check your connection or server status');
+    }
+}
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
+// File: login.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PoetGram - Login/Signup</title>
+    <style>
+        /* Previous styles remain the same */
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div id="loginForm" class="auth-box">
+            <div class="logo">PoetGram</div>
+            
+            <div class="form-group">
+                <input type="text" id="loginUsername" placeholder="Username" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+            </div>
+            
+            <div id="loginError" class="error-message"></div>
+            
+            <button onclick="login()">Log In</button>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                Don't have an account? 
+                <span class="switch-form" onclick="toggleForms()">Sign up</span>
+            </div>
+        </div>
+
+        <div id="signupForm" class="auth-box" style="display: none;">
+            <div class="logo">PoetGram</div>
+            
+            <div class="form-group">
+                <input type="text" id="signupUsername" placeholder="Choose Username" required>
+                <input type="password" id="signupPassword" placeholder="Choose Password" required>
+                <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            </div>
+            
+            <div id="signupError" class="error-message"></div>
+            <div id="signupSuccess" class="success-message"></div>
+            
+            <button onclick="signup()">Sign Up</button>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                Have an account? 
+                <span class="switch-form" onclick="toggleForms()">Log in</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleForms() {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            
+            if (loginForm.style.display === 'none') {
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+            } else {
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+            }
+            
+            // Clear error messages and inputs
+            document.getElementById('loginError').textContent = '';
+            document.getElementById('signupError').textContent = '';
+            document.getElementById('signupSuccess').textContent = '';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('signupUsername').value = '';
+            document.getElementById('signupPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorElement = document.getElementById('loginError');
+
+            if (!username || !password) {
+                errorElement.textContent = 'Please enter username and password';
+                errorElement.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Successful login, redirect to homepage
+                    localStorage.setItem('currentUser', username);
+                    window.location.href = 'homepage.html';
+                } else {
+                    errorElement.textContent = data.message || 'Login failed';
+                    errorElement.style.display = 'block';
+                }
+            } catch (error) {
+                errorElement.textContent = 'Network error. Please try again.';
+                errorElement.style.display = 'block';
+            }
+        }
+
+        async function signup() {
+            const username = document.getElementById('signupUsername').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorElement = document.getElementById('signupError');
+            const successElement = document.getElementById('signupSuccess');
+
+            // Validate inputs
+            if (!username || !password || !confirmPassword) {
+                errorElement.textContent = 'Please fill in all fields';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorElement.textContent = 'Passwords do not match';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+                return;
+            }
+
+            // Basic password strength check
+            if (password.length < 6) {
+                errorElement.textContent = 'Password must be at least 6 characters long';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successElement.textContent = 'Account created successfully!';
+                    successElement.style.display = 'block';
+                    errorElement.style.display = 'none';
+                    
+                    // Optionally auto-login or show login form
+                    setTimeout(() => {
+                        toggleForms();
+                        document.getElementById('loginUsername').value = username;
+                    }, 1500);
+                } else {
+                    errorElement.textContent = data.message || 'Signup failed';
+                    errorElement.style.display = 'block';
+                    successElement.style.display = 'none';
+                }
+            } catch (error) {
+                errorElement.textContent = 'Network error. Please try again.';
+                errorElement.style.display = 'block';
+                successElement.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
+// File: poetgram-backend/db.js
+// db.js - Database Connection Configuration
+const mysql = require('mysql2/promise');
+
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root',     // Replace with your MySQL username
+    password: 'VQjXb&wt%@sx%6jQou5@nwz$Yo', // Replace with your MySQL password
+    database: 'Poem',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+module.exports = pool;
+// File: poetgram-backend/dbOperations.js
+// dbOperations.js - Database CRUD Operations
+const pool = require('./db');
+
+class DatabaseOperations {
+
+    static async createUser(username, password, followers = 0, ratings = 0) {
+        try {
+            // Hash the password before storing
+            const hashedPassword = await PasswordUtils.hashPassword(password);
+            
+            const [result] = await pool.execute(
+                'INSERT INTO User (username, password, followers, ratings) VALUES (?, ?, ?, ?)',
+                [username, hashedPassword, followers, ratings]
+            );
+            return result;
+        } catch (error) {
+            console.error('Error creating user:', error);
+            throw error;
+        }
+    }
+
+    // Authenticate User
+    static async authenticateUser(username, password) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT * FROM User WHERE username = ?', 
+                [username]
+            );
+
+            if (rows.length === 0) {
+                return false;
+            }
+
+            // Compare provided password with stored hash
+            const isMatch = await PasswordUtils.comparePassword(
+                password, 
+                rows[0].password
+            );
+
+            return isMatch;
+        } catch (error) {
+            console.error('Authentication error:', error);
+            throw error;
+        }
+    }
+
+    // Check if Username Exists
+    static async checkUsernameExists(username) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT * FROM User WHERE username = ?', 
+                [username]
+            );
+            return rows.length > 0;
+        } catch (error) {
+            console.error('Username check error:', error);
+            throw error;
+        }
+    }
+    // User Operations
+    static async createUser(username, followers = 0, ratings = 0) {
+        try {
+            const [result] = await pool.execute(
+                'INSERT INTO User (username, followers, ratings) VALUES (?, ?, ?)',
+                [username, followers, ratings]
+            );
+            return result;
+        } catch (error) {
+            console.error('Error creating user:', error);
+            throw error;
+        }
+    }
+
+    static async getUserByUsername(username) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT * FROM User WHERE username = ?', 
+                [username]
+            );
+            return rows[0];
+        } catch (error) {
+            console.error('Error fetching user:', error);
+            throw error;
+        }
+    }
+
+    // Post Operations
+    // Update createPost method in dbOperations.js
+    static async createPost(genre, content, likes, username, titleId = null) {
+        try {
+            // Validate inputs
+            if (!genre || !content || !username) {
+                throw new Error('Genre, content, and username are required');
+            }
+    
+            // Sanitize inputs
+            const sanitizedGenre = genre.trim();
+            const sanitizedContent = content.trim();
+            const sanitizedUsername = username.trim();
+    
+            // Use execute instead of query, and destructure the result
+            const result = await pool.execute(
+                'INSERT INTO Posts (genre, content, likes, username, title_id) VALUES (?, ?, ?, ?, ?)',
+                [sanitizedGenre, sanitizedContent, likes || 0, sanitizedUsername, titleId]
+            );
+    
+            // The result is an array where the first element contains the actual result
+            return result[0];
+        } catch (error) {
+            console.error('Error creating post:', error);
+            throw error;
+        }
+    }
+
+    static async addComment(postId, username, comment) {
+        try {
+            // Validate inputs
+            if (!postId || !username || !comment) {
+                throw new Error('Post ID, username, and comment are required');
+            }
+    
+            // Sanitize inputs
+            const sanitizedUsername = username.trim();
+            const sanitizedComment = comment.trim();
+    
+            const result = await pool.execute(
+                'INSERT INTO Comments (post_id, username, comment) VALUES (?, ?, ?)',
+                [postId, sanitizedUsername, sanitizedComment]
+            );
+            return result;
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            throw error;
+        }
+    }
+    // Add method to get comments for a post
+    static async getCommentsByPostId(postId) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT * FROM Comments WHERE post_id = ?', 
+                [postId]
+            );
+            return rows;
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            throw error;
+        }
+    }
+
+    // Add method to like a post
+    static async likePost(postId) {
+        try {
+            const [result] = await pool.execute(
+                'UPDATE Posts SET likes = likes + 1 WHERE post_id = ?',
+                [postId]
+            );
+            return result;
+        } catch (error) {
+            console.error('Error liking post:', error);
+            throw error;
+        }
+    }
+
+    static async getPosts() {
+        try {
+            const [rows] = await pool.execute('SELECT * FROM Posts');
+            return rows;
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            throw error;
+        }
+    }
+
+    // Comment Operations
+    static async addComment(postId, comment) {
+        try {
+            const [result] = await pool.execute(
+                'INSERT INTO Comments (post_id, comment) VALUES (?, ?)',
+                [postId, comment]
+            );
+            return result;
+        } catch (error) {
+            console.error('Error adding comment:', error);
+            throw error;
+        }
+    }
+
+    // Authentication Operations
+    static async authenticateUser(username) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT * FROM User WHERE username = ?', 
+                [username]
+            );
+            return rows.length > 0;
+        } catch (error) {
+            console.error('Authentication error:', error);
+            throw error;
+        }
+    }
+
+    static async getPosts() {
+        try {
+            const [rows] = await pool.execute('SELECT * FROM Posts ORDER BY created_at DESC');
+            return rows;
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            throw error;
+        }
+    }
+}
+
+module.exports = DatabaseOperations;
+// File: poetgram-backend/passwordUtils.js
+// passwordUtils.js
+const bcrypt = require('bcryptjs');
+
+class PasswordUtils {
+    // Hash password before storing
+    static async hashPassword(password) {
+        const saltRounds = 10;
+        return await bcrypt.hash(password, saltRounds);
+    }
+
+    // Verify password
+    static async comparePassword(inputPassword, storedHash) {
+        return await bcrypt.compare(inputPassword, storedHash);
+    }
+}
+
+module.exports = PasswordUtils;
+// File: poetgram-backend/server.js
+// server.js
+const express = require('express');
+const bodyParser = require('body-parser');
+const DatabaseOperations = require('./dbOperations');
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Authentication Routes
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    
+    // Input validation
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    try {
+        const isAuthenticated = await DatabaseOperations.authenticateUser(username, password);
+        
+        if (isAuthenticated) {
+            res.status(200).json({ message: 'Login successful', username });
+        } else {
+            res.status(401).json({ message: 'Invalid credentials' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+app.post('/signup', async (req, res) => {
+    const { username, password } = req.body;
+    
+    // Input validation
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    // Password strength check (basic example)
+    if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    try {
+        // Check if username already exists
+        const usernameExists = await DatabaseOperations.checkUsernameExists(username);
+        
+        if (usernameExists) {
+            return res.status(409).json({ message: 'Username already exists' });
+        }
+
+        // Create user
+        await DatabaseOperations.createUser(username, password);
+        
+        res.status(201).json({ message: 'User created successfully', username });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error creating user' });
+    }
+});
+
+// Add this route in server.js
+app.post('/post', async (req, res) => {
+    const { genre, content, likes, username } = req.body;
+    
+    // Input validation
+    if (!genre || !content || !username) {
+        return res.status(400).json({ message: 'Genre, content, and username are required' });
+    }
+
+    try {
+        // Ensure likes is a number, defaulting to 0 if not provided
+        const postLikes = likes || 0;
+
+        const result = await DatabaseOperations.createPost(genre, content, postLikes, username);
+        
+        res.status(201).json({ 
+            message: 'Post created successfully', 
+            postId: result.insertId 
+        });
+    } catch (error) {
+        console.error('Post creation error:', error);
+        res.status(500).json({ message: 'Error creating post', details: error.message });
+    }
+});
+
+// Add this route in server.js
+app.get('/posts', async (req, res) => {
+    try {
+        const posts = await DatabaseOperations.getPosts();
+        res.status(200).json(posts);
+    } catch (error) {
+        console.error('Error fetching posts:', error);
+        res.status(500).json({ message: 'Error retrieving posts' });
+    }
+});
+// Route to add a comment
+app.post('/comment', async (req, res) => {
+    const { postId, username, comment } = req.body;
+    
+    if (!postId || !username || !comment) {
+        return res.status(400).json({ message: 'Post ID, username, and comment are required' });
+    }
+
+    try {
+        const result = await DatabaseOperations.addComment(postId, username, comment);
+        res.status(201).json({ 
+            message: 'Comment added successfully', 
+            commentId: result.insertId 
+        });
+    } catch (error) {
+        console.error('Comment creation error:', error);
+        res.status(500).json({ message: 'Error adding comment' });
+    }
+});
+
+// Route to get comments for a post
+app.get('/comments/:postId', async (req, res) => {
+    const { postId } = req.params;
+
+    try {
+        const comments = await DatabaseOperations.getCommentsByPostId(postId);
+        res.status(200).json(comments);
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        res.status(500).json({ message: 'Error retrieving comments' });
+    }
+});
+
+// Route to like a post
+app.post('/like', async (req, res) => {
+    const { postId } = req.body;
+    
+    if (!postId) {
+        return res.status(400).json({ message: 'Post ID is required' });
+    }
+
+    try {
+        const result = await DatabaseOperations.likePost(postId);
+        res.status(200).json({ message: 'Post liked successfully' });
+    } catch (error) {
+        console.error('Like post error:', error);
+        res.status(500).json({ message: 'Error liking post' });
+    }
+});
+
+// Start Server
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+module.exports = app;
