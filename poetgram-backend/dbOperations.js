@@ -3,21 +3,21 @@ const pool = require('./db');
 
 class DatabaseOperations {
 
-    static async createUser(username, password, followers = 0, ratings = 0) {
-        try {
-            // Hash the password before storing
-            const hashedPassword = await PasswordUtils.hashPassword(password);
+    // static async createUser(username, password, followers = 0, ratings = 0) {
+    //     try {
+    //         // Hash the password before storing
+    //         const hashedPassword = await PasswordUtils.hashPassword(password);
             
-            const [result] = await pool.execute(
-                'INSERT INTO User (username, password, followers, ratings) VALUES (?, ?, ?, ?)',
-                [username, hashedPassword, followers, ratings]
-            );
-            return result;
-        } catch (error) {
-            console.error('Error creating user:', error);
-            throw error;
-        }
-    }
+    //         const [result] = await pool.execute(
+    //             'INSERT INTO User (username, password, followers, ratings) VALUES (?, ?, ?, ?)',
+    //             [username, hashedPassword, followers, ratings]
+    //         );
+    //         return result;
+    //     } catch (error) {
+    //         console.error('Error creating user:', error);
+    //         throw error;
+    //     }
+    // }
 
     // Authenticate User
     static async authenticateUser(username, password) {
