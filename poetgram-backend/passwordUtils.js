@@ -1,16 +1,15 @@
 // passwordUtils.js
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt'); // ❌ Do NOT require both 'bcrypt' and 'bcryptjs'. Choose one — here we use 'bcrypt'
+const SALT_ROUNDS = 10;
 
 class PasswordUtils {
-    // Hash password before storing
     static async hashPassword(password) {
-        const saltRounds = 10;
-        return await bcrypt.hash(password, saltRounds);
+        return await bcrypt.hash(password, SALT_ROUNDS);
     }
 
-    // Verify password
     static async comparePassword(inputPassword, storedHash) {
-        return await bcrypt.compare(inputPassword, storedHash);
+        // return await bcrypt.compare(inputPassword, storedHash);
+        
     }
 }
 

@@ -12,11 +12,14 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Authentication Routes
+ // or wherever your module is
+
+app.use(cors());
+app.use(express.json());
+
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     
-    // Input validation
     if (!username || !password) {
         return res.status(400).json({ message: 'Username and password are required' });
     }
@@ -24,16 +27,20 @@ app.post('/login', async (req, res) => {
     try {
         const isAuthenticated = await DatabaseOperations.authenticateUser(username, password);
         
-        if (isAuthenticated) {
-            res.status(200).json({ message: 'Login successful', username });
+        // For debugging, log the actual result from the function
+        console.log(`Authentication result for user "${password}":`, isAuthenticated);
+
+        if (isAuthenticated === true) {
+            return res.status(200).json({ message: 'Login successful', username });
         } else {
-            res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 });
+
 
 app.post('/signup', async (req, res) => {
     const { username, password } = req.body;

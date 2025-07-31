@@ -1,48 +1,56 @@
 // dbOperations.js - Database CRUD Operations
 const pool = require('./db');
-
+ const PasswordUtils = require('./passwordUtils');
 class DatabaseOperations {
 
-    // static async createUser(username, password, followers = 0, ratings = 0) {
-    //     try {
-    //         // Hash the password before storing
-    //         const hashedPassword = await PasswordUtils.hashPassword(password);
-            
-    //         const [result] = await pool.execute(
-    //             'INSERT INTO User (username, password, followers, ratings) VALUES (?, ?, ?, ?)',
-    //             [username, hashedPassword, followers, ratings]
-    //         );
-    //         return result;
-    //     } catch (error) {
-    //         console.error('Error creating user:', error);
-    //         throw error;
-    //     }
-    // }
 
-    // Authenticate User
-    static async authenticateUser(username, password) {
+static async createUser(username, password, followers = 0, ratings = 0) {
         try {
-            const [rows] = await pool.execute(
-                'SELECT * FROM User WHERE username = ?', 
-                [username]
+
+            const [result] = await pool.execute(
+                'INSERT INTO User (username, password, followers, ratings) VALUES (?, ?, ?, ?)',
+                [username, password, followers, ratings]
             );
 
-            if (rows.length === 0) {
-                return false;
-            }
-
-            // Compare provided password with stored hash
-            const isMatch = await PasswordUtils.comparePassword(
-                password, 
-                rows[0].password
-            );
-
-            return isMatch;
+            return result;
         } catch (error) {
-            console.error('Authentication error:', error);
+            console.error('Error creating user:', error.message);
             throw error;
         }
     }
+
+    static async authenticateUser(username, inputPassword) {
+    try {
+        // Fetch the stored password for the given username from the database
+        const password= await pool.execute(
+            'SELECT password FROM User WHERE username = ?', 
+            [username]
+        );
+
+        // If no user is found
+        if (password ===0) {
+            console.log("❌ User not found");
+            return false;
+        }
+
+        const storedPassword = password;
+        console.log("Stored password from DB:", storedPassword);
+        console.log("Entered password:", inputPassword);
+        console.log("Stored:", storedPassword);
+        console.log("Input:", inputPassword);
+
+        // Compare input password with stored password (plaintext comparison)
+        const isMatch = (password === inputPassword);
+        console.log("Password match status:", isMatch);
+
+        return isMatch;
+    } catch (error) {
+        console.error('Authentication error:', error.message);
+        throw error;
+    }
+}
+
+
 
     // Check if Username Exists
     static async checkUsernameExists(username) {
@@ -58,16 +66,17 @@ class DatabaseOperations {
         }
     }
     // User Operations
-    static async createUser(username, followers = 0, ratings = 0) {
+    static async createUser(username,password, followers = 0, ratings = 0) {
         try {
             const [result] = await pool.execute(
-                'INSERT INTO User (username, followers, ratings) VALUES (?, ?, ?)',
-                [username, followers, ratings]
+                'INSERT INTO User (username, password, followers, ratings) VALUES (?,?, ?, ?)',
+                [username,password, followers, ratings]
             );
             return result;
         } catch (error) {
-            console.error('Error creating user:', error);
-            throw error;
+        console.error('Error creating user:', error.message);
+        console.error(error.stack);
+        throw error;
         }
     }
 
