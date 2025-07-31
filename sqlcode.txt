@@ -1,0 +1,31 @@
+ CREATE TABLE Viewer (
+ viewer_id INT AUTO_INCREMENT PRIMARY KEY,
+ viewer_name VARCHAR(20),
+ username VARCHAR(50),
+ followings INT
+ );
+ SELECT * FROM Viewer;
+ CREATE TABLE User (
+  username VARCHAR(255) Primary key,
+  password VARCHAR(255),
+  followers INT,
+  ratings INT
+);
+ CREATE TABLE Posts
+ (
+ post_id int primary key,
+ Genre VARCHAR(20),
+ content varchar(1000),
+ likes INT,
+username varchar(255),
+created_at Datetime,
+ title_id int,
+ Foreign key(username) references user(username)
+ );
+ create table Comments
+ (	comment_id int Primary Key,
+    comment_description varchar(1000),
+    post_id int,
+    foreign key(post_id ) references Posts(post_id)
+ )
+ select * from User;
